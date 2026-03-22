@@ -72,6 +72,25 @@ import Sidebar from '../components/Sidebar.astro';
             <textarea id="combo-desc" rows="4" placeholder="Explica cómo ejecutar este combo..."></textarea>
           </div>
 
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="combo-platform">Plataforma</label>
+              <select id="combo-platform">
+                <option value="">Selecciona...</option>
+                <option value="xbox">Xbox</option>
+                <option value="playstation">PlayStation</option>
+                <option value="teclado">Teclado</option>
+                <option value="android">Android</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="combo-tags">Tags adicionales</label>
+              <input type="text" id="combo-tags" placeholder="rush, axe, true combo">
+              <small>Separados por comas</small>
+            </div>
+          </div>
+
           <button type="submit" id="submit-btn" class="btn-upload">
             <span id="btn-text" class="btn-text">Publicar en el Dojo</span>
           </button>
@@ -170,6 +189,22 @@ import Sidebar from '../components/Sidebar.astro';
         (document.getElementById('combo-video') as HTMLInputElement).value = data.video_url || '';
         (document.getElementById('combo-desc') as HTMLTextAreaElement).value = data.description || '';
         if (fileLabel) fileLabel.textContent = 'Archivo actual: ' + data.json_data_url.split('/').pop();
+
+        // Pre-cargar tags
+        const tags: string[] = data.combo_tags || [];
+        const platformTags = ['xbox', 'playstation', 'teclado', 'android'];
+        let platform = '';
+        const extraTags: string[] = [];
+        tags.forEach((t: string) => {
+          const clean = t.replace('#', '');
+          if (platformTags.includes(clean)) {
+            platform = clean;
+          } else {
+            extraTags.push(clean);
+          }
+        });
+        (document.getElementById('combo-platform') as HTMLSelectElement).value = platform;
+        (document.getElementById('combo-tags') as HTMLInputElement).value = extraTags.join(', ');
         
         // Remove Required from file input if editing
         fileInput?.removeAttribute('required');
@@ -221,13 +256,26 @@ import Sidebar from '../components/Sidebar.astro';
         let imageUrl = (document.getElementById('combo-image') as HTMLInputElement).value;
         if (!imageUrl) imageUrl = '/images/sample.png';
 
+        // 3. Construir tags
+        const platform = (document.getElementById('combo-platform') as HTMLSelectElement).value;
+        const rawTags = (document.getElementById('combo-tags') as HTMLInputElement).value;
+        const combo_tags: string[] = [];
+        if (platform) combo_tags.push(`#${platform}`);
+        if (rawTags) {
+          rawTags.split(',').forEach(t => {
+            const clean = t.trim();
+            if (clean) combo_tags.push(`#${clean}`);
+          });
+        }
+
         const comboData = {
           name: (document.getElementById('combo-name') as HTMLInputElement).value,
           description: (document.getElementById('combo-desc') as HTMLTextAreaElement).value,
           image_url: imageUrl,
           video_url: (document.getElementById('combo-video') as HTMLInputElement).value,
           json_data_url: finalJsonUrl,
-          user_id: user.id
+          user_id: user.id,
+          combo_tags
         };
 
         let dbError;
