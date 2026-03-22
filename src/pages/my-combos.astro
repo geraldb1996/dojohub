@@ -1,0 +1,265 @@
+---
+import '../styles/global.css';
+import Sidebar from '../components/Sidebar.astro';
+---
+
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DojoHub | Mis Combos</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <button id="hamburger-btn" class="hamburger" aria-label="Menú">☰</button>
+        <div class="logo">
+          <a href="/" style="text-decoration: none; color: inherit;">
+            <span class="dojo">Dojo</span><span class="hub">hub</span>
+          </a>
+        </div>
+      <div class="topbar-right">
+        <button id="user-btn" class="user-icon" aria-label="Usuario">
+          <img src="https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png" alt="Avatar" class="user-avatar-img" onerror="this.src='https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'">
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="container">
+      <div id="auth-alert" class="alert hidden">
+        <p>⚠️ Debes iniciar sesión para ver tus combos.</p>
+        <a href="/" class="btn-secondary">Volver al Inicio</a>
+      </div>
+
+      <div id="combos-container">
+        <div class="dashboard-header">
+          <h1>Mis Armas del Dojo</h1>
+          <p>Gestiona, edita o retira tus técnicas de la arena pública.</p>
+        </div>
+
+        <div id="my-grid" class="grid">
+          <p class="loading-message">Invocando tus combos...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Sidebar />
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    const grid = document.getElementById('my-grid');
+    const authAlert = document.getElementById('auth-alert');
+    const combosContainer = document.getElementById('combos-container');
+    
+    // Sidebar logic
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const sidebarClose = document.getElementById('sidebar-close');
+
+    function toggleSidebar() {
+      sidebar?.classList.toggle('active');
+      sidebarOverlay?.classList.toggle('active');
+    }
+
+    hamburgerBtn?.addEventListener('click', toggleSidebar);
+    sidebarOverlay?.addEventListener('click', toggleSidebar);
+    sidebarClose?.addEventListener('click', toggleSidebar);
+
+    async function loadMyCombos() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        combosContainer?.classList.add('hidden');
+        authAlert?.classList.remove('hidden');
+        return;
+      }
+
+      // Fetch profile to set avatar
+      const { data: profile_meta } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile_meta?.avatar_url) {
+        const avatarImg = document.querySelector('.user-avatar-img');
+        if (avatarImg) (avatarImg as HTMLImageElement).src = profile_meta.avatar_url;
+      }
+
+      const { data: combos, error } = await supabase
+        .from('combos')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error || !combos) {
+        if (grid) grid.innerHTML = '<p class="error-message">Error al cargar tus combos.</p>';
+        return;
+      }
+
+      if (combos.length === 0) {
+        if (grid) grid.innerHTML = '<p class="empty-message">Aún no has forjado ningún combo. ¡Ve al Dashboard!</p>';
+        return;
+      }
+
+      if (grid) {
+        grid.innerHTML = '';
+        combos.forEach(combo => {
+          const card = document.createElement('div');
+          card.className = 'card manager-card';
+          card.innerHTML = `
+            <div class="card-media">
+              <img src="${combo.image_url}" alt="${combo.name}" onerror="this.src='/images/sample.png'">
+            </div>
+            <div class="mgr-info">
+              <h3>${combo.name}</h3>
+              <div class="mgr-actions">
+                <button class="btn-edit" data-id="${combo.id}">⚙️ Editar</button>
+                <button class="btn-delete" data-id="${combo.id}" data-file="${combo.json_data_url}">🗑️ Borrar</button>
+              </div>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      }
+    }
+
+    loadMyCombos();
+
+    // Event Delegation para Borrar y Editar
+    grid?.addEventListener('click', async (e: any) => {
+      const btnDelete = e.target.closest('.btn-delete');
+      const btnEdit = e.target.closest('.btn-edit');
+
+      if (btnDelete) {
+        const id = btnDelete.getAttribute('data-id');
+        const fileUrl = btnDelete.getAttribute('data-file');
+        
+        if (confirm('¿Seguro que quieres retirar este combo del Dojo para siempre?')) {
+          btnDelete.disabled = true;
+          btnDelete.textContent = '...';
+
+          try {
+            // 1. Opcional: Intentar borrar el archivo de Storage si es una URL interna
+            if (fileUrl && fileUrl.includes('supabase.co/storage')) {
+              const path = fileUrl.split('combos/').pop();
+              if (path) {
+                await supabase.storage.from('combos').remove([path]);
+              }
+            }
+
+            // 2. Borrar de la base de datos
+            const { error } = await supabase
+              .from('combos')
+              .delete()
+              .eq('id', id);
+
+            if (error) throw error;
+            
+            // Recargar
+            loadMyCombos();
+          } catch (err: any) {
+            alert('Error al borrar: ' + err.message);
+            btnDelete.disabled = false;
+            btnDelete.textContent = '🗑️ Borrar';
+          }
+        }
+      }
+
+      if (btnEdit) {
+        const id = btnEdit.getAttribute('data-id');
+        window.location.href = `/dashboard?id=${id}`;
+      }
+    });
+
+  </script>
+
+  <style>
+    .dashboard-header {
+      margin-top: 40px;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .manager-card {
+      text-align: left;
+    }
+
+    .mgr-info {
+      padding-top: 12px;
+    }
+
+    .mgr-info h3 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mgr-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .mgr-actions button {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .btn-edit {
+      background: #2a2a2a;
+      color: #eee;
+      border: 1px solid #333 !important;
+    }
+
+    .btn-edit:hover {
+      background: #3a3a3a;
+      border-color: #444 !important;
+    }
+
+    .btn-delete {
+      background: rgba(255, 77, 77, 0.1);
+      color: #ff4d4d;
+      border: 1px solid rgba(255, 77, 77, 0.2) !important;
+    }
+
+    .btn-delete:hover {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    .hidden { display: none; }
+
+    .alert {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 77, 77, 0.1);
+      border: 1px solid rgba(255, 77, 77, 0.2);
+      border-radius: 15px;
+      margin-top: 40px;
+    }
+
+    .btn-secondary {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #333;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+  </style>
+</body>
+</html>

@@ -1,0 +1,431 @@
+---
+import '../styles/global.css';
+import Sidebar from '../components/Sidebar.astro';
+---
+
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DojoHub | Dashboard</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <div class="topbar-left">
+        <button id="hamburger-btn" class="hamburger" aria-label="Menú">☰</button>
+        <div class="logo">
+          <a href="/" style="text-decoration: none; color: inherit;">
+            <span class="dojo">Dojo</span><span class="hub">hub</span>
+          </a>
+        </div>
+      <div class="topbar-right">
+        <button id="user-btn" class="user-icon" aria-label="Usuario">
+          <img src="https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png" alt="Avatar" class="user-avatar-img" onerror="this.src='https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png'">
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="content dashboard-content">
+    <div class="container">
+      <div id="auth-alert" class="alert hidden">
+        <p>⚠️ Debes iniciar sesión para subir combos.</p>
+        <a href="/" class="btn-secondary">Volver al Inicio</a>
+      </div>
+
+      <div id="upload-container" class="upload-area">
+        <div class="dashboard-header">
+          <h1 id="form-title">Subir Nuevo Combo</h1>
+          <p id="form-subtitle">Comparte tu técnica con la comunidad del Dojo.</p>
+        </div>
+
+        <form id="upload-form" class="upload-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="combo-name">Nombre del Combo</label>
+              <input type="text" id="combo-name" required placeholder="Ej: Axe 0-to-Death">
+            </div>
+
+            <div class="form-group">
+              <label for="combo-image">URL de Imagen</label>
+              <input type="url" id="combo-image" placeholder="https://imgur.com/... (opcional)">
+            </div>
+
+            <div class="form-group">
+              <label for="combo-video">URL de Video</label>
+              <input type="url" id="combo-video" placeholder="https://youtube.com/watch?v=...">
+            </div>
+
+            <div class="form-group">
+              <label for="combo-file">Archivo .dojofiles</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="combo-file" accept=".dojofiles,.json">
+                <div class="file-custom" id="file-label">Seleccionar archivo...</div>
+              </div>
+              <small id="file-hint" class="hidden">Deja en blanco para conservar el actual.</small>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="combo-desc">Descripción</label>
+            <textarea id="combo-desc" rows="4" placeholder="Explica cómo ejecutar este combo..."></textarea>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn-upload">
+            <span id="btn-text" class="btn-text">Publicar en el Dojo</span>
+          </button>
+          
+          <p id="upload-status" class="status-message"></p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <Sidebar />
+
+  <script>
+    import { supabase } from '../lib/supabase';
+
+    const uploadForm = document.getElementById('upload-form') as HTMLFormElement;
+    const uploadContainer = document.getElementById('upload-container');
+    const authAlert = document.getElementById('auth-alert');
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const statusMsg = document.getElementById('upload-status');
+    const fileInput = document.getElementById('combo-file') as HTMLInputElement;
+
+    const formTitle = document.getElementById('form-title');
+    const formSubtitle = document.getElementById('form-subtitle');
+    const btnText = document.getElementById('btn-text');
+    const fileHint = document.getElementById('file-hint');
+    const fileLabel = document.getElementById('file-label');
+
+    // Sidebar logic
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const sidebarClose = document.getElementById('sidebar-close');
+
+    function toggleSidebar() {
+      sidebar?.classList.toggle('active');
+      sidebarOverlay?.classList.toggle('active');
+    }
+
+    hamburgerBtn?.addEventListener('click', toggleSidebar);
+    sidebarOverlay?.addEventListener('click', toggleSidebar);
+    sidebarClose?.addEventListener('click', toggleSidebar);
+
+    // Context Detection
+    const params = new URLSearchParams(window.location.search);
+    const comboId = params.get('id');
+    let existingData: any = null;
+
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        uploadContainer?.classList.add('hidden');
+        authAlert?.classList.remove('hidden');
+        return;
+      }
+
+      // Fetch profile to set avatar
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.avatar_url) {
+        const avatarImg = document.querySelector('.user-avatar-img');
+        if (avatarImg) (avatarImg as HTMLImageElement).src = profile.avatar_url;
+      }
+
+      if (comboId) {
+        // Mode: Edition
+        if (formTitle) formTitle.textContent = 'Editar Arma del Dojo';
+        if (formSubtitle) formSubtitle.textContent = 'Ajusta tu técnica antes del combate.';
+        if (btnText) btnText.textContent = 'Guardar Cambios';
+        if (fileHint) fileHint.classList.remove('hidden');
+        
+        // Fetch existing data
+        const { data, error } = await supabase
+          .from('combos')
+          .select('*')
+          .eq('id', comboId)
+          .single();
+
+        if (error || !data) {
+          if (statusMsg) statusMsg.textContent = 'Error: No se encontró el combo.';
+          return;
+        }
+
+        if (data.user_id !== user.id) {
+          window.location.href = '/';
+          return;
+        }
+
+        existingData = data;
+        (document.getElementById('combo-name') as HTMLInputElement).value = data.name || '';
+        (document.getElementById('combo-image') as HTMLInputElement).value = (data.image_url === '/images/sample.png' ? '' : data.image_url) || '';
+        (document.getElementById('combo-video') as HTMLInputElement).value = data.video_url || '';
+        (document.getElementById('combo-desc') as HTMLTextAreaElement).value = data.description || '';
+        if (fileLabel) fileLabel.textContent = 'Archivo actual: ' + data.json_data_url.split('/').pop();
+        
+        // Remove Required from file input if editing
+        fileInput?.removeAttribute('required');
+      } else {
+        // Mode: Creation
+        fileInput?.setAttribute('required', '');
+      }
+    }
+    init();
+
+    // Form Handling
+    uploadForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (submitBtn) submitBtn.disabled = true;
+      if (statusMsg) {
+        statusMsg.textContent = '⏳ Procesando los datos del Sensei...';
+        statusMsg.className = 'status-message';
+      }
+
+      try {
+        let finalJsonUrl = existingData?.json_data_url;
+        const file = fileInput.files?.[0];
+
+        // 1. Manejar Archivo (Solo si se sube uno nuevo)
+        if (file) {
+          const fileName = `${Date.now()}_${file.name}`;
+          const filePath = `${user.id}/${fileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('combos')
+            .upload(filePath, file);
+
+          if (uploadError) throw new Error(`[Storage] ${uploadError.message}`);
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('combos')
+            .getPublicUrl(filePath);
+          
+          finalJsonUrl = publicUrl;
+        }
+
+        if (!finalJsonUrl) throw new Error('Se requiere un archivo .dojofiles');
+
+        // 2. Imagen por defecto
+        let imageUrl = (document.getElementById('combo-image') as HTMLInputElement).value;
+        if (!imageUrl) imageUrl = '/images/sample.png';
+
+        const comboData = {
+          name: (document.getElementById('combo-name') as HTMLInputElement).value,
+          description: (document.getElementById('combo-desc') as HTMLTextAreaElement).value,
+          image_url: imageUrl,
+          video_url: (document.getElementById('combo-video') as HTMLInputElement).value,
+          json_data_url: finalJsonUrl,
+          user_id: user.id
+        };
+
+        let dbError;
+        if (comboId) {
+          // Actualización
+          const { error } = await supabase
+            .from('combos')
+            .update(comboData)
+            .eq('id', comboId);
+          dbError = error;
+        } else {
+          // Creación
+          const { error } = await supabase
+            .from('combos')
+            .insert([comboData]);
+          dbError = error;
+        }
+
+        if (dbError) throw new Error(`[Database] ${dbError.message}`);
+
+        if (statusMsg) {
+          statusMsg.textContent = '✅ ¡Sabiduría actualizada con éxito!';
+          statusMsg.className = 'status-message success';
+        }
+        
+        setTimeout(() => window.location.href = comboId ? '/my-combos' : '/', 2000);
+
+      } catch (err: any) {
+        console.error(err);
+        if (statusMsg) {
+          statusMsg.textContent = err.message;
+          statusMsg.className = 'status-message error';
+        }
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+
+    // File input visual feedback
+    fileInput?.addEventListener('change', () => {
+      if (fileLabel && fileInput.files?.[0]) {
+        fileLabel.textContent = 'Nuevo archivo: ' + fileInput.files[0].name;
+      }
+    });
+  </script>
+
+  <style>
+    .upload-area {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #0a0a0a;
+      padding: 40px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+
+    .dashboard-header {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .dashboard-header h1 {
+      font-size: 2rem;
+      color: #fff;
+    }
+
+    .upload-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 0.9rem;
+      color: #aaa;
+      font-weight: 500;
+    }
+
+    .form-group input, .form-group textarea {
+      padding: 12px 16px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: #ff4d4d;
+      background: #151515;
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .file-custom {
+      padding: 12px 16px;
+      background: #111;
+      border: 1px dashed #444;
+      border-radius: 10px;
+      color: #888;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .btn-upload {
+      margin-top: 20px;
+      padding: 16px;
+      background: #ff4d4d;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-upload:hover {
+      background: #ff6666;
+      transform: translateY(-2px);
+    }
+
+    .btn-upload:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status-message {
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .status-message.success { color: #4dff88; }
+    .status-message.error { color: #ff4d4d; }
+
+    #file-hint {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .alert {
+      text-align: center;
+      padding: 40px;
+      background: rgba(255, 77, 77, 0.1);
+      border: 1px solid rgba(255, 77, 77, 0.2);
+      border-radius: 15px;
+      margin-top: 40px;
+    }
+
+    .btn-secondary {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #333;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .full-width { grid-column: span 1; }
+    }
+  </style>
+</body>
+</html>

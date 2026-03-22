@@ -1,0 +1,125 @@
+---
+import { supabase } from '../lib/supabase';
+---
+<div id="profile-modal" class="modal">
+  <div class="modal-content profile-content">
+    <button class="modal-close" id="profile-modal-close" aria-label="Cerrar">&times;</button>
+    
+    <div class="modal-header">
+      <h2>Pefil del Dojo</h2>
+      <p>Personaliza tu identidad en la arena</p>
+    </div>
+
+    <form id="profile-form" class="profile-form">
+      <div class="form-group">
+        <label for="profile-username">Username</label>
+        <input type="text" id="profile-username" placeholder="Tu apodo en el Dojo">
+      </div>
+      
+      <div class="form-group">
+        <label for="profile-rango">Rango</label>
+        <select id="profile-rango">
+          <option value="Tin">Tin</option>
+          <option value="Bronce">Bronce</option>
+          <option value="Plata">Plata</option>
+          <option value="Oro">Oro</option>
+          <option value="Platino">Platino</option>
+          <option value="Diamante">Diamante</option>
+          <option value="Vallhalan">Vallhalan</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="profile-avatar">URL de Avatar</label>
+        <input type="url" id="profile-avatar" placeholder="https://ejemplo.com/mifoto.png">
+        <small>Pega aquí la URL de tu imagen de perfil.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="profile-email">Email</label>
+        <input type="email" id="profile-email" disabled>
+        <small>El email no se puede cambiar por ahora.</small>
+      </div>
+
+      <hr class="divider">
+      
+      <h3>Cambiar Contraseña</h3>
+      <div class="form-group">
+        <label for="profile-new-password">Nueva Contraseña</label>
+        <input type="password" id="profile-new-password" minlength="6" placeholder="Deja en blanco para no cambiar">
+      </div>
+
+      <button type="submit" id="profile-submit-btn" class="btn-primary">Guardar Cambios</button>
+      <p id="profile-status" class="status-message"></p>
+    </form>
+  </div>
+</div>
+
+<style>
+  .profile-content {
+    background: #111 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 2rem;
+    width: 450px !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+  }
+
+  .modal-header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 1.5rem 0;
+  }
+
+  h3 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: #888;
+  }
+
+  .profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-group label {
+    font-size: 0.85rem;
+    color: #ccc;
+  }
+
+  .form-group input, .form-group select {
+    padding: 0.8rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    outline: none;
+  }
+
+  .form-group input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .status-message {
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+  }
+
+  .status-message.success { color: #4dff88; }
+  .status-message.error { color: #ff4d4d; }
+</style>
