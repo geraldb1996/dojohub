@@ -15,7 +15,7 @@ import Sidebar from '../components/Sidebar.astro';
       <div class="topbar-left">
         <button id="hamburger-btn" class="hamburger" aria-label="Menú">☰</button>
         <div class="logo">
-          <a href="/" style="text-decoration: none; color: inherit;">
+          <a href="/dojohub/" style="text-decoration: none; color: inherit;">
             <span class="dojo">Dojo</span><span class="hub">hub</span>
           </a>
         </div>
@@ -31,7 +31,7 @@ import Sidebar from '../components/Sidebar.astro';
     <div class="container">
       <div id="auth-alert" class="alert hidden">
         <p>⚠️ Debes iniciar sesión para subir combos.</p>
-        <a href="/" class="btn-secondary">Volver al Inicio</a>
+        <a href="/dojohub/" class="btn-secondary">Volver al Inicio</a>
       </div>
 
       <div id="upload-container" class="upload-area">
@@ -160,7 +160,7 @@ import Sidebar from '../components/Sidebar.astro';
         }
 
         if (data.user_id !== user.id) {
-          window.location.href = '/';
+          window.location.href = '/dojohub/';
           return;
         }
 
@@ -253,7 +253,7 @@ import Sidebar from '../components/Sidebar.astro';
           statusMsg.className = 'status-message success';
         }
         
-        setTimeout(() => window.location.href = comboId ? '/my-combos' : '/', 2000);
+        setTimeout(() => window.location.href = comboId ? '/dojohub/my-combos' : '/dojohub/', 2000);
 
       } catch (err: any) {
         console.error(err);
