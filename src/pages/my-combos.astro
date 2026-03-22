@@ -15,7 +15,7 @@ import Sidebar from '../components/Sidebar.astro';
       <div class="topbar-left">
         <button id="hamburger-btn" class="hamburger" aria-label="Menú">☰</button>
         <div class="logo">
-          <a href="/" style="text-decoration: none; color: inherit;">
+          <a href="/dojohub/" style="text-decoration: none; color: inherit;">
             <span class="dojo">Dojo</span><span class="hub">hub</span>
           </a>
         </div>
@@ -31,7 +31,7 @@ import Sidebar from '../components/Sidebar.astro';
     <div class="container">
       <div id="auth-alert" class="alert hidden">
         <p>⚠️ Debes iniciar sesión para ver tus combos.</p>
-        <a href="/" class="btn-secondary">Volver al Inicio</a>
+        <a href="/dojohub/" class="btn-secondary">Volver al Inicio</a>
       </div>
 
       <div id="combos-container">
@@ -173,7 +173,7 @@ import Sidebar from '../components/Sidebar.astro';
 
       if (btnEdit) {
         const id = btnEdit.getAttribute('data-id');
-        window.location.href = `/dashboard?id=${id}`;
+        window.location.href = `/dojohub/dashboard?id=${id}`;
       }
     });
 

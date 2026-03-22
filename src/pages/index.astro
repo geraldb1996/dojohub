@@ -21,7 +21,9 @@ import Sidebar from '../components/Sidebar.astro';
       <div class="topbar-left">
         <button id="hamburger-btn" class="hamburger" aria-label="Menú">☰</button>
         <div class="logo">
-          <span class="dojo">Dojo</span><span class="hub">hub</span>
+          <a href="/dojohub/" style="text-decoration: none; color: inherit;">
+            <span class="dojo">Dojo</span><span class="hub">hub</span>
+          </a>
         </div>
       </div>
 
@@ -172,7 +174,7 @@ import Sidebar from '../components/Sidebar.astro';
     if (btnLogout) {
       btnLogout.addEventListener('click', async () => {
         await supabase.auth.signOut();
-        window.location.reload();
+        window.location.href = '/dojohub/';
       });
     }
 
@@ -258,7 +260,7 @@ import Sidebar from '../components/Sidebar.astro';
           profileStatus.textContent = '¡Perfil actualizado!';
           profileStatus.classList.add('success');
         }
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.location.href = '/dojohub/', 1500);
       });
     }
 
@@ -307,7 +309,7 @@ import Sidebar from '../components/Sidebar.astro';
             authStatus.textContent = authMode === 'login' ? '¡Bienvenido Sensei!' : '¡Cuenta creada! Revisa tu email.';
             authStatus.classList.add('success');
           }
-          setTimeout(() => window.location.reload(), 1500);
+          setTimeout(() => window.location.href = '/dojohub/', 1500);
         }
       });
     }
