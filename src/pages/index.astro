@@ -11,6 +11,7 @@ import Sidebar from '../components/Sidebar.astro';
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/dojohub/tablogo.png" />
   <title>DojoHub</title>
 </head>
 
@@ -200,11 +201,15 @@ import Sidebar from '../components/Sidebar.astro';
       const query = searchInput?.value.toLowerCase().trim() || '';
       
       filteredCombosData = allCombosData.filter(combo => {
+        // Filtro por plataforma (los botones de arriba)
         const matchesFilter = activeFilter === 'all' || (combo.combo_tags && combo.combo_tags.includes(activeFilter));
+        
+        // Filtro por búsqueda (Nombre, Descripción, Usuario y ahora TAGS)
         const matchesSearch = !query || 
           combo.name.toLowerCase().includes(query) || 
           (combo.description && combo.description.toLowerCase().includes(query)) ||
-          (profileMap[combo.user_id]?.username || '').toLowerCase().includes(query);
+          (profileMap[combo.user_id]?.username || '').toLowerCase().includes(query) ||
+          (combo.combo_tags && combo.combo_tags.some((t: string) => t.toLowerCase().includes(query)));
 
         return matchesFilter && matchesSearch;
       });
